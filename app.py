@@ -92,6 +92,9 @@ st.set_page_config(page_title="Schrijf Overzicht", layout="wide")
 
 st.title("Schrijf Overzicht Dirk Wajer")
 
+if "chapter_form_open" not in st.session_state:
+    st.session_state.chapter_form_open = False
+
 # Onthoud selectie in de sessie
 if "chapter_id" not in st.session_state:
     st.session_state.chapter_id = None
@@ -151,16 +154,32 @@ st.divider()
 st.header("Hoofdstukken")
 chapters = q("SELECT id, ord, title, description FROM chapters WHERE project_id=? ORDER BY ord, id", (project_id,))
 
-with st.expander("➕ Nieuw hoofdstuk"):
+if st.button("➕ Nieuw hoofdstuk maken"):
+    st.session_state.chapter_form_open = True
+    st.rerun()
+with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_open):
     with st.form("new_chapter"):
         ctitle = st.text_input("Titel", key="ctitle")
         cdesc = st.text_area("Hoofdstuk-omschrijving", height=100, key="cdesc")
         ok = st.form_submit_button("Toevoegen")
-    if ok and ctitle.strip():
-        next_ord = (max([c[1] for c in chapters]) + 1) if chapters else 1
-        exec_sql("INSERT INTO chapters(project_id, ord, title, description) VALUES(?,?,?,?)",
-                 (project_id, next_ord, ctitle.strip(), cdesc))
-        st.rerun()
+if ok and ctitle.strip():
+    next_ord = (max([c[1] for c in chapters]) + 1) if chapters else 1
+    new_cid = exec_sql(
+        "INSERT INTO chapters(project_id, ord, title, description) VALUES(?,?,?,?)",
+        (project_id, next_ord, ctitle.strip(), cdesc)
+    )
+
+    # 1) selecteer nieuw hoofdstuk
+    st.session_state.chapter_id = new_cid
+
+    # 2) leeg de formvelden
+    st.session_state.ctitle = ""
+    st.session_state.cdesc = ""
+
+    # 3) klap de expander dicht
+    st.session_state.chapter_form_open = False
+
+    st.rerun()
 
 if not chapters:
     st.info("Nog geen hoofdstukken. Voeg er één toe.")
@@ -336,6 +355,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
