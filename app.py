@@ -167,7 +167,7 @@ with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_o
         new_cid = exec_sql(
             "INSERT INTO chapters(project_id, ord, title, description) VALUES(?,?,?,?)",
             (project_id, next_ord, ctitle.strip(), cdesc)
-    )
+       )
 
     # 1) selecteer nieuw hoofdstuk
     st.session_state.chapter_id = new_cid
@@ -352,6 +352,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
