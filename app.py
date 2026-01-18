@@ -214,7 +214,7 @@ st.divider()
 # Scènes
 st.header("Scènes in dit hoofdstuk")
 scenes = q("""
-SELECT id, ord, title, status, pov, setting, summary
+SELECT id, ord, title, status, summary
 FROM scenes
 WHERE chapter_id=?
 ORDER BY ord, id
@@ -309,15 +309,22 @@ with right:
 st.divider()
 
 # Mini-overzicht: alle scènes in hoofdstuk
+scenes_scan = q("""
+SELECT id, ord, title, status, pov, setting, summary
+FROM scenes
+WHERE chapter_id=?
+ORDER BY ord, id
+""", (chapter_id,))
+
 st.subheader("Overzicht (snelle scan)")
-for sid, o, t, status, pov, setting, sm in scenes:
+for sid, o, t, status, pov, setting, sm in scenes_scan:
     meta_parts = [status]
 
     if pov:
         meta_parts.append(f"POV: {pov}")
 
     if setting:
-        meta_parts.append(setting)  # jouw discipline: "Bibliotheek - Nacht"
+        meta_parts.append(setting)  # bijv. "Bibliotheek - Nacht"
 
     meta_line = " | ".join(meta_parts)
 
