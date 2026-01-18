@@ -310,5 +310,11 @@ st.divider()
 # Mini-overzicht: alle scènes in hoofdstuk
 st.subheader("Overzicht (snelle scan)")
 for sid, o, t, s, sm in scenes:
-    st.markdown(f"**{o:02d} — {t}**  \n_{s}_ — {shorten((sm or '').strip(), width=140, placeholder='…')}")
+    st.markdown(f"**{o:02d} — {t}**  \n_{s}_")
+    if (sm or "").strip():
+        st.write(sm)  # st.write behoudt netjes regeleindes
+    else:
+        st.caption("— geen samenvatting —")
+    st.divider()
+
 
