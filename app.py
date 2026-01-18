@@ -158,7 +158,7 @@ if st.button("➕ Nieuw hoofdstuk maken"):
     st.session_state.chapter_form_open = True
     st.rerun()
 with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_open):
-    with st.form("new_chapter"):
+with st.form("new_chapter", clear_on_submit=True):
         ctitle = st.text_input("Titel", key="ctitle")
         cdesc = st.text_area("Hoofdstuk-omschrijving", height=100, key="cdesc")
         ok = st.form_submit_button("Toevoegen")
@@ -172,9 +172,6 @@ if ok and ctitle.strip():
     # 1) selecteer nieuw hoofdstuk
     st.session_state.chapter_id = new_cid
 
-    # 2) leeg de formvelden
-    st.session_state.ctitle = ""
-    st.session_state.cdesc = ""
 
     # 3) klap de expander dicht
     st.session_state.chapter_form_open = False
@@ -355,6 +352,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
