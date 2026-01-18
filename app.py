@@ -214,11 +214,12 @@ st.divider()
 # Scènes
 st.header("Scènes in dit hoofdstuk")
 scenes = q("""
-SELECT id, ord, title, status, summary
+SELECT id, ord, title, status, pov, setting, summary
 FROM scenes
 WHERE chapter_id=?
 ORDER BY ord, id
 """, (chapter_id,))
+
 
 with st.expander("➕ Nieuwe scène"):
     with st.form("new_scene"):
@@ -309,12 +310,24 @@ st.divider()
 
 # Mini-overzicht: alle scènes in hoofdstuk
 st.subheader("Overzicht (snelle scan)")
-for sid, o, t, s, sm in scenes:
-    st.markdown(f"**{o:02d} — {t}**  \n_{s}_")
+for sid, o, t, status, pov, setting, sm in scenes:
+    meta_parts = [status]
+
+    if pov:
+        meta_parts.append(f"POV: {pov}")
+
+    if setting:
+        meta_parts.append(setting)  # jouw discipline: "Bibliotheek - Nacht"
+
+    meta_line = " | ".join(meta_parts)
+
+    st.markdown(f"**{o:02d} — {t}**  \n_{meta_line}_")
+
     if (sm or "").strip():
-        st.write(sm)  # st.write behoudt netjes regeleindes
+        st.write(sm)
     else:
         st.caption("— geen samenvatting —")
+
     st.divider()
 
 
