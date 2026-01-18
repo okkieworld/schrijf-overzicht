@@ -154,9 +154,11 @@ st.divider()
 st.header("Hoofdstukken")
 chapters = q("SELECT id, ord, title, description FROM chapters WHERE project_id=? ORDER BY ord, id", (project_id,))
 
+# (optioneel) knop om het formulier open te zetten
 if st.button("➕ Nieuw hoofdstuk maken"):
     st.session_state.chapter_form_open = True
     st.rerun()
+
 with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_open):
     with st.form("new_chapter", clear_on_submit=True):
         ctitle = st.text_input("Titel", key="ctitle")
@@ -173,9 +175,6 @@ with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_o
         st.session_state.chapter_id = new_cid
         st.session_state.chapter_form_open = False
         st.rerun()
-
-
-    st.session_state.chapter_id = new_cid
 
     # 3) klap de expander dicht
     st.session_state.chapter_form_open = False
@@ -356,6 +355,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
