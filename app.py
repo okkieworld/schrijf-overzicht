@@ -90,7 +90,7 @@ def basic_summarize(prose: str) -> str:
 init_db()
 st.set_page_config(page_title="Schrijf Overzicht", layout="wide")
 
-st.title("Schrijf Overzicht – synopsis → hoofdstuk → scène → proza")
+st.title("Schrijf Overzicht Dirk Wajer")
 
 # Onthoud selectie in de sessie
 if "chapter_id" not in st.session_state:
@@ -311,3 +311,4 @@ st.divider()
 st.subheader("Overzicht (snelle scan)")
 for sid, o, t, s, sm in scenes:
     st.markdown(f"**{o:02d} — {t}**  \n_{s}_ — {shorten((sm or '').strip(), width=140, placeholder='…')}")
+
