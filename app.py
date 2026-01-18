@@ -162,15 +162,19 @@ with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_o
         ctitle = st.text_input("Titel", key="ctitle")
         cdesc = st.text_area("Hoofdstuk-omschrijving", height=100, key="cdesc")
         ok = st.form_submit_button("Toevoegen")
+
     if ok and ctitle.strip():
         next_ord = (max([c[1] for c in chapters]) + 1) if chapters else 1
         new_cid = exec_sql(
             "INSERT INTO chapters(project_id, ord, title, description) VALUES(?,?,?,?)",
             (project_id, next_ord, ctitle.strip(), cdesc)
-       )
+        )
 
-    # 1) selecteer nieuw hoofdstuk
-    st.session_state.chapter_id = new_cid
+        st.session_state.chapter_id = new_cid
+        st.session_state.chapter_form_open = False
+        st.rerun()
+
+
 
 
     # 3) klap de expander dicht
@@ -352,6 +356,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
