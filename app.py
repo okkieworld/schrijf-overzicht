@@ -175,7 +175,7 @@ with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_o
         st.rerun()
 
 
-
+    st.session_state.chapter_id = new_cid
 
     # 3) klap de expander dicht
     st.session_state.chapter_form_open = False
@@ -356,6 +356,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
