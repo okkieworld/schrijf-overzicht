@@ -250,10 +250,6 @@ if st.button("➕ Nieuwe scène maken"):
     st.session_state.scene_form_open = True
     st.rerun()
 
-if not scenes:
-    st.info("Nog geen scènes in dit hoofdstuk.")
-    st.stop()
-
 
 with st.expander("➕ Nieuwe scène", expanded=st.session_state.scene_form_open):
     with st.form("new_scene", clear_on_submit=True):
@@ -298,6 +294,10 @@ FROM scenes WHERE id=?
 (title, ord_, status, purpose, setting, pov, conflict, outcome, setup, payoff, summary, prose) = scene
 
 left, right = st.columns([1,1])
+
+if not scenes:
+    st.info("Nog geen scènes in dit hoofdstuk.")
+    st.stop()
 
 with left:
     st.subheader("Scènekaart")
@@ -386,6 +386,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
