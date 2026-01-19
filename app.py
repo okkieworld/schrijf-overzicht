@@ -91,15 +91,24 @@ init_db()
 st.set_page_config(page_title="Schrijf Overzicht", layout="wide")
 
 st.title("Schrijf Overzicht Dirk Wajer")
+if "chapter_form_open" not in st.session_state:
+    st.session_state.chapter_form_open = False
+
+if "chapter_id" not in st.session_state:
+    st.session_state.chapter_id = None
 
 if "scene_form_open" not in st.session_state:
     st.session_state.scene_form_open = False
+
 if "scene_id" not in st.session_state:
     st.session_state.scene_id = None
 
+if "prev_chapter_id" not in st.session_state:
+    st.session_state.prev_chapter_id = None
+
+
 # Onthoud selectie in de sessie
-if "chapter_id" not in st.session_state:
-    st.session_state.chapter_id = None
+
 
 # Sidebar: project kiezen/maken
 st.sidebar.header("Project")
@@ -376,6 +385,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
