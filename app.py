@@ -92,8 +92,10 @@ st.set_page_config(page_title="Schrijf Overzicht", layout="wide")
 
 st.title("Schrijf Overzicht Dirk Wajer")
 
-if "chapter_form_open" not in st.session_state:
-    st.session_state.chapter_form_open = False
+if "scene_form_open" not in st.session_state:
+    st.session_state.scene_form_open = False
+if "scene_id" not in st.session_state:
+    st.session_state.scene_id = None
 
 # Onthoud selectie in de sessie
 if "chapter_id" not in st.session_state:
@@ -236,24 +238,40 @@ ORDER BY ord, id
 """, (chapter_id,))
 
 
-with st.expander("➕ Nieuwe scène"):
-    with st.form("new_scene"):
+with st.expander("➕ Nieuwe scène", expanded=st.session_state.scene_form_open):
+    with st.form("new_scene", clear_on_submit=True):
         stitle = st.text_input("Titel", key="stitle")
-        status = st.selectbox("Status", ["idea", "outline", "draft", "done"], index=1)
+        status = st.selectbox("Status", ["idea", "outline", "draft", "done"], index=1, key="sstatus")
         ok = st.form_submit_button("Toevoegen")
+
     if ok and stitle.strip():
         next_ord = (max([s[1] for s in scenes]) + 1) if scenes else 1
-        exec_sql("INSERT INTO scenes(chapter_id, ord, title, status) VALUES(?,?,?,?)",
-                 (chapter_id, next_ord, stitle.strip(), status))
+        new_sid = exec_sql(
+            "INSERT INTO scenes(chapter_id, ord, title, status) VALUES(?,?,?,?)",
+            (chapter_id, next_ord, stitle.strip(), status)
+        )
+
+        st.session_state.scene_id = new_sid
+        st.session_state.scene_form_open = False
         st.rerun()
 
-if not scenes:
-    st.info("Nog geen scènes in dit hoofdstuk.")
-    st.stop()
-
 scene_opts = [f"{ord_:02d} — {title} [{status}]" for (_id, ord_, title, status, _sum) in scenes]
-scene_idx = st.selectbox("Selecteer scène", list(range(len(scene_opts))), format_func=lambda i: scene_opts[i])
+scene_ids = [sid for (sid, _o, _t, _s, _sm) in scenes]
+
+default_scene_idx = 0
+if st.session_state.scene_id in scene_ids:
+    default_scene_idx = scene_ids.index(st.session_state.scene_id)
+
+scene_idx = st.selectbox(
+    "Selecteer scène",
+    list(range(len(scene_opts))),
+    format_func=lambda i: scene_opts[i],
+    index=default_scene_idx,
+    key="scene_selectbox"
+)
+
 scene_id, scene_ord, scene_title, scene_status, scene_summary = scenes[scene_idx]
+st.session_state.scene_id = scene_id
 
 scene = q("""
 SELECT title, ord, status, purpose, setting, pov, conflict, outcome, setup, payoff, summary, prose
@@ -351,6 +369,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
