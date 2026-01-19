@@ -241,6 +241,10 @@ if not scenes:
     st.info("Nog geen scènes in dit hoofdstuk.")
     st.stop()
 
+if st.button("➕ Nieuwe scène maken"):
+    st.session_state.scene_form_open = True
+    st.rerun()
+
 with st.expander("➕ Nieuwe scène", expanded=st.session_state.scene_form_open):
     with st.form("new_scene", clear_on_submit=True):
         stitle = st.text_input("Titel", key="stitle")
@@ -372,6 +376,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
