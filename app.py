@@ -211,6 +211,15 @@ chap_idx = st.selectbox(
 chapter_id, chapter_ord, chapter_title, chapter_desc = chapters[chap_idx]
 st.session_state.chapter_id = chapter_id  # sync terug
 
+if st.session_state.prev_chapter_id is None:
+    st.session_state.prev_chapter_id = chapter_id
+elif st.session_state.prev_chapter_id != chapter_id:
+    st.session_state.prev_chapter_id = chapter_id
+    st.session_state.scene_id = None
+    st.session_state.scene_form_open = False
+    st.rerun()
+
+
 c1, c2, c3 = st.columns([2,1,1])
 with c1:
     new_title = st.text_input("Hoofdstuktitel", value=chapter_title)
@@ -271,6 +280,10 @@ with st.expander("➕ Nieuwe scène", expanded=st.session_state.scene_form_open)
 scene_opts = [f"{ord_:02d} — {title} [{status}]" for (_id, ord_, title, status, _sum) in scenes]
 scene_ids = [sid for (sid, _o, _t, _s, _sm) in scenes]
 
+if not scenes:
+    st.info("Nog geen scènes in dit hoofdstuk.")
+    st.stop()
+
 default_scene_idx = 0
 if st.session_state.scene_id in scene_ids:
     default_scene_idx = scene_ids.index(st.session_state.scene_id)
@@ -283,7 +296,7 @@ scene_idx = st.selectbox(
     key="scene_selectbox"
 )
 
-scene_id, scene_ord, scene_title, scene_status, scene_summary = scenes[scene_idx]
+scene_id, scene_ord, scene_title, scene_status, scene_summary = scenes[int(scene_idx)]
 st.session_state.scene_id = scene_id
 
 scene = q("""
@@ -295,9 +308,6 @@ FROM scenes WHERE id=?
 
 left, right = st.columns([1,1])
 
-if not scenes:
-    st.info("Nog geen scènes in dit hoofdstuk.")
-    st.stop()
 
 with left:
     st.subheader("Scènekaart")
@@ -386,6 +396,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
