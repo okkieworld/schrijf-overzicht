@@ -3,9 +3,19 @@ import psycopg
 import streamlit as st
 from textwrap import shorten
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+import os
+import streamlit as st
+
+DATABASE_URL = None
+try:
+    DATABASE_URL = st.secrets["DATABASE_URL"]
+except Exception:
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL ontbreekt. Zet deze in Streamlit Cloud Secrets.")
+    st.error("DATABASE_URL ontbreekt. Zet deze in Streamlit Cloud → Settings → Secrets.")
+    st.stop()
+
 
 def db():
     return psycopg.connect(DATABASE_URL, autocommit=True)
@@ -378,6 +388,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
