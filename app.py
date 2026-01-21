@@ -201,7 +201,7 @@ if choice == "(nieuw project)":
     st.stop()
 
 project_id = projects[proj_titles.index(choice)-1][0]
-project = q("SELECT title, synopsis FROM projects WHERE id=%s", (project_id,), one=True)
+project = q_fresh("SELECT title, synopsis FROM projects WHERE id=%s", (project_id,), one=True)
 
 # Sidebar: hoofdstukken-navigatie
 st.sidebar.subheader("Hoofdstukken")
@@ -538,6 +538,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
