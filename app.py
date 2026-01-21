@@ -212,6 +212,17 @@ chap_idx = st.selectbox(
 chapter_id, chapter_ord, chapter_title, chapter_desc = chapters[chap_idx]
 st.session_state.chapter_id = chapter_id  # sync terug
 
+# Detecteer hoofdstukwissel en reset scène-selectie
+if st.session_state.prev_chapter_id is None:
+    st.session_state.prev_chapter_id = chapter_id
+elif st.session_state.prev_chapter_id != chapter_id:
+    st.session_state.prev_chapter_id = chapter_id
+    st.session_state.scene_id = None
+    st.session_state.scene_form_open = False
+    if "scene_selectbox" in st.session_state:
+        del st.session_state["scene_selectbox"]
+    st.rerun()
+
 c1, c2, c3 = st.columns([2,1,1])
 with c1:
     new_title = st.text_input("Hoofdstuktitel", value=chapter_title)
@@ -390,6 +401,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
