@@ -391,27 +391,29 @@ with left:
     payoff2 = st.text_area("Payoff (wordt later ingelost)", value=payoff or "", height=80)
 
     summary2 = st.text_area("Scènesamenvatting (bewerken mag)", value=summary or "", height=110)
+
+if "ai_prompt_box" not in st.session_state:
+    st.session_state.ai_prompt_box = ""
+if "ai_json_box" not in st.session_state:
+    st.session_state.ai_json_box = ""
+
 st.markdown("### AI-hulp: proza → scènekaart (handmatig kopiëren/plakken)")
 
-if "ai_prompt" not in st.session_state:
-    st.session_state.ai_prompt = ""
-if "ai_json" not in st.session_state:
-    st.session_state.ai_json = ""
+
 
 c_ai1, c_ai2 = st.columns([1, 1])
 with c_ai1:
     if st.button("Maak AI-prompt (scènekaart)"):
-        st.session_state.ai_prompt = build_scene_card_prompt(prose or "")
+        st.session_state.ai_prompt_box = build_scene_card_prompt(prose or "")
         st.toast("Prompt klaar. Kopieer en plak in je AI-tool.")
 
 with c_ai2:
     if st.button("Leeg AI-velden"):
-        st.session_state.ai_prompt = ""
-        st.session_state.ai_json = ""
+        st.session_state.ai_prompt_box = ""
+        st.session_state.ai_json_box = ""
 
-st.text_area("Prompt om te kopiëren", value=st.session_state.ai_prompt, height=220, key="ai_prompt_box")
-
-st.text_area("Plak hier AI-JSON output", value=st.session_state.ai_json, height=180, key="ai_json_box")
+st.text_area("Prompt om te kopiëren", height=220, key="ai_prompt_box"))
+st.text_area("Plak hier AI-JSON output", height=180, key="ai_json_box")
 
 if st.button("Vul scènekaart uit JSON"):
     raw = st.session_state.ai_json_box.strip()
@@ -511,6 +513,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
