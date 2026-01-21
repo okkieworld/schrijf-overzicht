@@ -196,6 +196,7 @@ if choice == "(nieuw project)":
     if ok and title.strip():
         pid = exec_sql("INSERT INTO projects(title, synopsis) VALUES(%s,%s) RETURNING id", (title.strip(), synopsis), returning_id=True)
         st.success("Project aangemaakt.")
+        st.cache_data.clear()
         st.rerun()
     st.stop()
 
@@ -221,6 +222,7 @@ with colA:
 with colB:
     if st.button("Project verwijderen", type="secondary"):
         exec_sql("DELETE FROM projects WHERE id=%s", (project_id,))
+        st.cache_data.clear()
         st.rerun()
 
 syn = st.text_area("Project-synopsis", value=project[1] or "", height=140)
@@ -255,6 +257,7 @@ with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_o
 
         st.session_state.chapter_id = new_cid
         st.session_state.chapter_form_open = False
+        st.cache_data.clear()
         st.rerun()
 
 
@@ -307,6 +310,7 @@ with c3:
     if st.button("Hoofdstuk verwijderen"):
         exec_sql("DELETE FROM chapters WHERE id=%s", (chapter_id,))
         normalize_order("chapters", "project_id", project_id)
+        st.cache_data.clear()
         st.rerun()
 
 new_desc = st.text_area("Hoofdstuk-omschrijving", value=chapter_desc or "", height=120)
@@ -314,6 +318,7 @@ if st.button("Hoofdstuk opslaan"):
     exec_sql("UPDATE chapters SET title=%s, ord=%s, description=%s WHERE id=%s",
              (new_title.strip() or chapter_title, int(new_ord), new_desc, chapter_id))
     normalize_order("chapters", "project_id", project_id)
+    st.cache_data.clear()
     st.rerun()
 
 st.divider()
@@ -348,6 +353,7 @@ with st.expander("➕ Nieuwe scène", expanded=st.session_state.scene_form_open)
 
         st.session_state.scene_id = new_sid
         st.session_state.scene_form_open = False
+        st.cache_data.clear()
         st.rerun()
 
 if not scenes:
@@ -487,6 +493,7 @@ if st.button("Vul scènekaart uit JSON"):
         if st.button("Scène verwijderen"):
             exec_sql("DELETE FROM scenes WHERE id=%s", (scene_id,))
             normalize_order("scenes", "chapter_id", chapter_id)
+            st.cache_data.clear()
             st.rerun()
 
 with right:
@@ -531,6 +538,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
