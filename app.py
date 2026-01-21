@@ -92,6 +92,12 @@ def q_fresh(sql, params=(), one=False):
             cur.execute(sql, params)
             return cur.fetchone() if one else cur.fetchall()
 
+def q(sql, params=(), one=False):
+    """Behoudt de oude naam 'q' zodat je bestaande code blijft werken."""
+    if one:
+        return q_fresh(sql, params, one=True)
+    return q_cached(sql, params)
+
 def exec_sql(sql, params=(), returning_id=False):
     conn = db()
     with conn.cursor() as cur:
@@ -538,6 +544,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
