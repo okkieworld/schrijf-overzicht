@@ -6,6 +6,13 @@ from textwrap import shorten
 import os
 import streamlit as st
 
+@st.cache_resource
+def get_conn():
+    return psycopg.connect(DATABASE_URL, autocommit=True)
+
+def db():
+    return get_conn()
+
 DATABASE_URL = None
 try:
     DATABASE_URL = st.secrets["DATABASE_URL"]
@@ -59,18 +66,18 @@ def init_db():
     """)
 
 def q(sql, params=(), one=False):
-    with db() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql, params)
-            return cur.fetchone() if one else cur.fetchall()
+    conn = db()
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+        return cur.fetchone() if one else cur.fetchall()
 
 def exec_sql(sql, params=(), returning_id=False):
-    with db() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql, params)
-            if returning_id:
-                row = cur.fetchone()
-                return row[0] if row else None
+    conn = db()
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+        if returning_id:
+            row = cur.fetchone()
+            return row[0] if row else None
     return None
 
 def normalize_order(table, where_col, where_val):
@@ -406,6 +413,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
