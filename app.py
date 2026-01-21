@@ -391,7 +391,61 @@ with left:
     payoff2 = st.text_area("Payoff (wordt later ingelost)", value=payoff or "", height=80)
 
     summary2 = st.text_area("Scènesamenvatting (bewerken mag)", value=summary or "", height=110)
+st.markdown("### AI-hulp: proza → scènekaart (handmatig kopiëren/plakken)")
 
+if "ai_prompt" not in st.session_state:
+    st.session_state.ai_prompt = ""
+if "ai_json" not in st.session_state:
+    st.session_state.ai_json = ""
+
+c_ai1, c_ai2 = st.columns([1, 1])
+with c_ai1:
+    if st.button("Maak AI-prompt (scènekaart)"):
+        st.session_state.ai_prompt = build_scene_card_prompt(prose or "")
+        st.toast("Prompt klaar. Kopieer en plak in je AI-tool.")
+
+with c_ai2:
+    if st.button("Leeg AI-velden"):
+        st.session_state.ai_prompt = ""
+        st.session_state.ai_json = ""
+
+st.text_area("Prompt om te kopiëren", value=st.session_state.ai_prompt, height=220, key="ai_prompt_box")
+
+st.text_area("Plak hier AI-JSON output", value=st.session_state.ai_json, height=180, key="ai_json_box")
+
+if st.button("Vul scènekaart uit JSON"):
+    raw = st.session_state.ai_json_box.strip()
+    if not raw:
+        st.warning("Plak eerst JSON output van de AI.")
+    else:
+        try:
+            data = json.loads(raw)
+
+            pov_ai = safe_get(data, "pov").strip()
+            setting_ai = safe_get(data, "setting").strip()
+            purpose_ai = safe_get(data, "purpose").strip()
+            conflict_ai = safe_get(data, "conflict").strip()
+            outcome_ai = safe_get(data, "outcome").strip()
+            setup_ai = safe_get(data, "setup").strip()
+            payoff_ai = safe_get(data, "payoff").strip()
+            summary_ai = safe_get(data, "summary").strip()
+
+            exec_sql("""
+                UPDATE scenes SET
+                    pov=%s, setting=%s, purpose=%s, conflict=%s, outcome=%s,
+                    setup=%s, payoff=%s, summary=%s
+                WHERE id=%s
+            """, (
+                pov_ai, setting_ai, purpose_ai, conflict_ai, outcome_ai,
+                setup_ai, payoff_ai, summary_ai, scene_id
+            ))
+
+            st.toast("Scènekaart gevuld uit AI-JSON.")
+            st.rerun()
+
+        except Exception as e:
+            st.error(f"Kon JSON niet lezen. Controleer of de AI uitsluitend geldig JSON gaf.\n\n{e}")
+    
     b1, b2, b3 = st.columns([1,1,1])
     with b1:
         if st.button("Scène opslaan"):
@@ -457,6 +511,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
