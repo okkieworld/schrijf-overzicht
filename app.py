@@ -270,7 +270,12 @@ with st.expander("➕ Nieuwe scène", expanded=st.session_state.scene_form_open)
         st.session_state.scene_form_open = False
         st.rerun()
 
+if not scenes:
+    st.info("Nog geen scènes in dit hoofdstuk.")
+    st.stop()
+
 scene_opts = [f"{ord_:02d} — {title} [{status}]" for (_id, ord_, title, status, _sum) in scenes]
+
 scene_ids = [sid for (sid, _o, _t, _s, _sm) in scenes]
 
 default_scene_idx = 0
@@ -285,7 +290,7 @@ scene_idx = st.selectbox(
     key="scene_selectbox"
 )
 
-scene_id, scene_ord, scene_title, scene_status, scene_summary = scenes[scene_idx]
+scene_id, scene_ord, scene_title, scene_status, scene_summary = scenes[int(scene_idx)]
 st.session_state.scene_id = scene_id
 
 scene = q("""
@@ -297,9 +302,6 @@ FROM scenes WHERE id=%s
 
 left, right = st.columns([1,1])
 
-if not scenes:
-    st.info("Nog geen scènes in dit hoofdstuk.")
-    st.stop()
 
 with left:
     st.subheader("Scènekaart")
@@ -388,6 +390,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
