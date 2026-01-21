@@ -366,7 +366,12 @@ with left:
 
 with right:
     st.subheader("Proza (per scène)")
-    prose2 = st.text_area("Tekst", value=prose or "", height=750)
+    prose2 = st.text_area(
+        "Tekst",
+        value=prose or "",
+        height=750,
+        key=f"prose_text_{scene_id}"
+    )
     if st.button("Proza opslaan"):
         exec_sql("UPDATE scenes SET prose=%s WHERE id=%s", (prose2, scene_id))
         st.toast("Proza opgeslagen")
@@ -401,6 +406,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
