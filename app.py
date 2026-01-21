@@ -1,42 +1,38 @@
-import sqlite3
-from dataclasses import dataclass
+import os
+import psycopg
 import streamlit as st
 from textwrap import shorten
 
-DB = "story.db"
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL ontbreekt. Zet deze in Streamlit Cloud Secrets.")
 
 def db():
-    conn = sqlite3.connect(DB, check_same_thread=False)
-    conn.execute("PRAGMA foreign_keys = ON;")
-    return conn
+    return psycopg.connect(DATABASE_URL, autocommit=True)
 
 def init_db():
-    conn = db()
-    cur = conn.cursor()
-
-    cur.execute("""
+    exec_sql("""
     CREATE TABLE IF NOT EXISTS projects (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         synopsis TEXT DEFAULT ''
     );
     """)
 
-    cur.execute("""
+    exec_sql("""
     CREATE TABLE IF NOT EXISTS chapters (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
         ord INTEGER NOT NULL DEFAULT 1,
         title TEXT NOT NULL,
-        description TEXT DEFAULT '',
-        FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+        description TEXT DEFAULT ''
     );
     """)
 
-    cur.execute("""
+    exec_sql("""
     CREATE TABLE IF NOT EXISTS scenes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        chapter_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
         ord INTEGER NOT NULL DEFAULT 1,
         title TEXT NOT NULL,
         purpose TEXT DEFAULT '',
@@ -48,35 +44,29 @@ def init_db():
         payoff TEXT DEFAULT '',
         status TEXT DEFAULT 'outline',
         summary TEXT DEFAULT '',
-        prose TEXT DEFAULT '',
-        FOREIGN KEY(chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
+        prose TEXT DEFAULT ''
     );
     """)
 
-    conn.commit()
-    conn.close()
-
 def q(sql, params=(), one=False):
-    conn = db()
-    cur = conn.cursor()
-    cur.execute(sql, params)
-    rows = cur.fetchone() if one else cur.fetchall()
-    conn.close()
-    return rows
+    with db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            return cur.fetchone() if one else cur.fetchall()
 
-def exec_sql(sql, params=()):
-    conn = db()
-    cur = conn.cursor()
-    cur.execute(sql, params)
-    conn.commit()
-    last = cur.lastrowid
-    conn.close()
-    return last
+def exec_sql(sql, params=(), returning_id=False):
+    with db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            if returning_id:
+                row = cur.fetchone()
+                return row[0] if row else None
+    return None
 
 def normalize_order(table, where_col, where_val):
-    rows = q(f"SELECT id FROM {table} WHERE {where_col}=? ORDER BY ord, id", (where_val,))
+    rows = q(f"SELECT id FROM {table} WHERE {where_col}=%s ORDER BY ord, id", (where_val,))
     for i, (rid,) in enumerate(rows, start=1):
-        exec_sql(f"UPDATE {table} SET ord=? WHERE id=?", (i, rid))
+        exec_sql(f"UPDATE {table} SET ord=%s WHERE id=%s", (i, rid))
 
 def basic_summarize(prose: str) -> str:
     prose = prose.strip()
@@ -122,18 +112,18 @@ if choice == "(nieuw project)":
         synopsis = st.text_area("Synopsis", height=120)
         ok = st.form_submit_button("Maak project")
     if ok and title.strip():
-        pid = exec_sql("INSERT INTO projects(title, synopsis) VALUES(?,?)", (title.strip(), synopsis))
+        pid = exec_sql("INSERT INTO projects(title, synopsis) VALUES(%s,%s) RETURNING id", (title.strip(), synopsis), returning_id=True)
         st.success("Project aangemaakt.")
         st.rerun()
     st.stop()
 
 project_id = projects[proj_titles.index(choice)-1][0]
-project = q("SELECT title, synopsis FROM projects WHERE id=?", (project_id,), one=True)
+project = q("SELECT title, synopsis FROM projects WHERE id=%s", (project_id,), one=True)
 
 # Sidebar: hoofdstukken-navigatie
 st.sidebar.subheader("Hoofdstukken")
 sidebar_chapters = q(
-    "SELECT id, ord, title FROM chapters WHERE project_id=? ORDER BY ord, id",
+    "SELECT id, ord, title FROM chapters WHERE project_id=%s ORDER BY ord, id",
     (project_id,)
 )
 
@@ -151,19 +141,19 @@ with colA:
     st.subheader(project[0])
 with colB:
     if st.button("Project verwijderen", type="secondary"):
-        exec_sql("DELETE FROM projects WHERE id=?", (project_id,))
+        exec_sql("DELETE FROM projects WHERE id=%s", (project_id,))
         st.rerun()
 
 syn = st.text_area("Project-synopsis", value=project[1] or "", height=140)
 if st.button("Synopsis opslaan"):
-    exec_sql("UPDATE projects SET synopsis=? WHERE id=?", (syn, project_id))
+    exec_sql("UPDATE projects SET synopsis=%s WHERE id=%s", (syn, project_id))
     st.toast("Opgeslagen")
 
 st.divider()
 
 # Hoofdstukken
 st.header("Hoofdstukken")
-chapters = q("SELECT id, ord, title, description FROM chapters WHERE project_id=? ORDER BY ord, id", (project_id,))
+chapters = q("SELECT id, ord, title, description FROM chapters WHERE project_id=%s ORDER BY ord, id", (project_id,))
 
 # (optioneel) knop om het formulier open te zetten
 if st.button("➕ Nieuw hoofdstuk maken"):
@@ -179,8 +169,9 @@ with st.expander("➕ Nieuw hoofdstuk", expanded=st.session_state.chapter_form_o
     if ok and ctitle.strip():
         next_ord = (max([c[1] for c in chapters]) + 1) if chapters else 1
         new_cid = exec_sql(
-            "INSERT INTO chapters(project_id, ord, title, description) VALUES(?,?,?,?)",
-            (project_id, next_ord, ctitle.strip(), cdesc)
+            "INSERT INTO chapters(project_id, ord, title, description) VALUES(%s,%s,%s,%s) RETURNING id",
+            (project_id, next_ord, ctitle.strip(), cdesc),
+            returning_id=True
         )
 
         st.session_state.chapter_id = new_cid
@@ -211,15 +202,6 @@ chap_idx = st.selectbox(
 chapter_id, chapter_ord, chapter_title, chapter_desc = chapters[chap_idx]
 st.session_state.chapter_id = chapter_id  # sync terug
 
-if st.session_state.prev_chapter_id is None:
-    st.session_state.prev_chapter_id = chapter_id
-elif st.session_state.prev_chapter_id != chapter_id:
-    st.session_state.prev_chapter_id = chapter_id
-    st.session_state.scene_id = None
-    st.session_state.scene_form_open = False
-    st.rerun()
-
-
 c1, c2, c3 = st.columns([2,1,1])
 with c1:
     new_title = st.text_input("Hoofdstuktitel", value=chapter_title)
@@ -233,13 +215,13 @@ with c2:
 )
 with c3:
     if st.button("Hoofdstuk verwijderen"):
-        exec_sql("DELETE FROM chapters WHERE id=?", (chapter_id,))
+        exec_sql("DELETE FROM chapters WHERE id=%s", (chapter_id,))
         normalize_order("chapters", "project_id", project_id)
         st.rerun()
 
 new_desc = st.text_area("Hoofdstuk-omschrijving", value=chapter_desc or "", height=120)
 if st.button("Hoofdstuk opslaan"):
-    exec_sql("UPDATE chapters SET title=?, ord=?, description=? WHERE id=?",
+    exec_sql("UPDATE chapters SET title=%s, ord=%s, description=%s WHERE id=%s",
              (new_title.strip() or chapter_title, int(new_ord), new_desc, chapter_id))
     normalize_order("chapters", "project_id", project_id)
     st.rerun()
@@ -251,7 +233,7 @@ st.header("Scènes in dit hoofdstuk")
 scenes = q("""
 SELECT id, ord, title, status, summary
 FROM scenes
-WHERE chapter_id=?
+WHERE chapter_id=%s
 ORDER BY ord, id
 """, (chapter_id,))
 
@@ -269,8 +251,9 @@ with st.expander("➕ Nieuwe scène", expanded=st.session_state.scene_form_open)
     if ok and stitle.strip():
         next_ord = (max([s[1] for s in scenes]) + 1) if scenes else 1
         new_sid = exec_sql(
-            "INSERT INTO scenes(chapter_id, ord, title, status) VALUES(?,?,?,?)",
-            (chapter_id, next_ord, stitle.strip(), status)
+            "INSERT INTO scenes(chapter_id, ord, title, status) VALUES(%s,%s,%s,%s) RETURNING id",
+            (chapter_id, next_ord, stitle.strip(), status),
+            returning_id=True
         )
 
         st.session_state.scene_id = new_sid
@@ -279,10 +262,6 @@ with st.expander("➕ Nieuwe scène", expanded=st.session_state.scene_form_open)
 
 scene_opts = [f"{ord_:02d} — {title} [{status}]" for (_id, ord_, title, status, _sum) in scenes]
 scene_ids = [sid for (sid, _o, _t, _s, _sm) in scenes]
-
-if not scenes:
-    st.info("Nog geen scènes in dit hoofdstuk.")
-    st.stop()
 
 default_scene_idx = 0
 if st.session_state.scene_id in scene_ids:
@@ -296,18 +275,21 @@ scene_idx = st.selectbox(
     key="scene_selectbox"
 )
 
-scene_id, scene_ord, scene_title, scene_status, scene_summary = scenes[int(scene_idx)]
+scene_id, scene_ord, scene_title, scene_status, scene_summary = scenes[scene_idx]
 st.session_state.scene_id = scene_id
 
 scene = q("""
 SELECT title, ord, status, purpose, setting, pov, conflict, outcome, setup, payoff, summary, prose
-FROM scenes WHERE id=?
+FROM scenes WHERE id=%s
 """, (scene_id,), one=True)
 
 (title, ord_, status, purpose, setting, pov, conflict, outcome, setup, payoff, summary, prose) = scene
 
 left, right = st.columns([1,1])
 
+if not scenes:
+    st.info("Nog geen scènes in dit hoofdstuk.")
+    st.stop()
 
 with left:
     st.subheader("Scènekaart")
@@ -326,7 +308,7 @@ with left:
         status2 = st.selectbox("Status", ["idea", "outline", "draft", "done"],
                                index=["idea","outline","draft","done"].index(status))
 
-    purpose2 = st.text_area("Functie / wat verandert er?", value=purpose or "", height=80)
+    purpose2 = st.text_area("Functie / wat verandert er%s", value=purpose or "", height=80)
     setting2 = st.text_input("Setting / tijd", value=setting or "")
     pov2 = st.text_input("POV", value=pov or "")
     conflict2 = st.text_area("Conflict", value=conflict or "", height=80)
@@ -341,9 +323,9 @@ with left:
         if st.button("Scène opslaan"):
             exec_sql("""
             UPDATE scenes SET
-                title=?, ord=?, status=?, purpose=?, setting=?, pov=?, conflict=?, outcome=?,
-                setup=?, payoff=?, summary=?
-            WHERE id=?
+                title=%s, ord=%s, status=%s, purpose=%s, setting=%s, pov=%s, conflict=%s, outcome=%s,
+                setup=%s, payoff=%s, summary=%s
+            WHERE id=%s
             """, (title2.strip() or title, int(ord2), status2, purpose2, setting2, pov2,
                   conflict2, outcome2, setup2, payoff2, summary2, scene_id))
             normalize_order("scenes", "chapter_id", chapter_id)
@@ -351,11 +333,11 @@ with left:
     with b2:
         if st.button("Samenvat uit proza"):
             new_sum = basic_summarize(prose or "")
-            exec_sql("UPDATE scenes SET summary=? WHERE id=?", (new_sum, scene_id))
+            exec_sql("UPDATE scenes SET summary=%s WHERE id=%s", (new_sum, scene_id))
             st.rerun()
     with b3:
         if st.button("Scène verwijderen"):
-            exec_sql("DELETE FROM scenes WHERE id=?", (scene_id,))
+            exec_sql("DELETE FROM scenes WHERE id=%s", (scene_id,))
             normalize_order("scenes", "chapter_id", chapter_id)
             st.rerun()
 
@@ -363,7 +345,7 @@ with right:
     st.subheader("Proza (per scène)")
     prose2 = st.text_area("Tekst", value=prose or "", height=750)
     if st.button("Proza opslaan"):
-        exec_sql("UPDATE scenes SET prose=? WHERE id=?", (prose2, scene_id))
+        exec_sql("UPDATE scenes SET prose=%s WHERE id=%s", (prose2, scene_id))
         st.toast("Proza opgeslagen")
 
 st.divider()
@@ -372,7 +354,7 @@ st.divider()
 scenes_scan = q("""
 SELECT id, ord, title, status, pov, setting, summary
 FROM scenes
-WHERE chapter_id=?
+WHERE chapter_id=%s
 ORDER BY ord, id
 """, (chapter_id,))
 
@@ -396,7 +378,6 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
-
 
 
 
