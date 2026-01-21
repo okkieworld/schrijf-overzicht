@@ -113,6 +113,50 @@ if "scene_id" not in st.session_state:
 if "prev_chapter_id" not in st.session_state:
     st.session_state.prev_chapter_id = None
 
+import json
+
+def build_scene_card_prompt(prose: str) -> str:
+    prose = (prose or "").strip()
+    return f"""Je bent een redacteur die bestaand proza terugvertaalt naar een scènekaart.
+
+Geef de output uitsluitend als geldig JSON, zonder extra tekst.
+
+Belangrijke richtlijnen:
+- Schrijf in het Nederlands
+- Wees beknopt en functioneel
+- De samenvatting is één korte alinea (max. 4 zinnen)
+- Focus op wat er verandert in deze scène
+- Setting = alleen locatie + tijd van de dag (kort).
+  Voorbeelden:
+  - Milos – hete middag
+  - Veldlab – avond
+  - Kastelli
+  - Het heilige huis – laat op de avond
+  Geen sfeer, geen beschrijving.
+
+Gebruik exact dit JSON-schema:
+{{
+  "pov": "",
+  "setting": "",
+  "purpose": "",
+  "conflict": "",
+  "outcome": "",
+  "setup": "",
+  "payoff": "",
+  "summary": ""
+}}
+
+Proza:
+\"\"\"{prose}\"\"\"
+"""
+
+def safe_get(d: dict, key: str) -> str:
+    v = d.get(key, "")
+    if v is None:
+        return ""
+    if isinstance(v, (dict, list)):
+        return json.dumps(v, ensure_ascii=False)
+    return str(v)
 
 # Onthoud selectie in de sessie
 
@@ -413,6 +457,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
