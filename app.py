@@ -412,7 +412,7 @@ with c_ai2:
         st.session_state.ai_prompt_box = ""
         st.session_state.ai_json_box = ""
 
-st.text_area("Prompt om te kopiëren", height=220, key="ai_prompt_box"))
+st.text_area("Prompt om te kopiëren", height=220, key="ai_prompt_box")
 st.text_area("Plak hier AI-JSON output", height=180, key="ai_json_box")
 
 if st.button("Vul scènekaart uit JSON"):
@@ -513,6 +513,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
