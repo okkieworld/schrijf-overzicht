@@ -359,12 +359,12 @@ with left:
             """, (title2.strip() or title, int(ord2), status2, purpose2, setting2, pov2,
                   conflict2, outcome2, setup2, payoff2, summary2, scene_id))
             normalize_order("scenes", "chapter_id", chapter_id)
-            st.rerun()
+            st.toast("Opgeslagen")
     with b2:
         if st.button("Samenvat uit proza"):
             new_sum = basic_summarize(prose or "")
             exec_sql("UPDATE scenes SET summary=%s WHERE id=%s", (new_sum, scene_id))
-            st.rerun()
+            st.toast("Samengevat")
     with b3:
         if st.button("Scène verwijderen"):
             exec_sql("DELETE FROM scenes WHERE id=%s", (scene_id,))
@@ -413,6 +413,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
