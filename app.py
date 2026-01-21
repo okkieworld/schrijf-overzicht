@@ -6,12 +6,23 @@ from textwrap import shorten
 import os
 import streamlit as st
 
-@st.cache_resource
-def get_conn():
-    return psycopg.connect(DATABASE_URL, autocommit=True)
+from psycopg_pool import ConnectionPool
 
-def db():
-    return get_conn()
+@st.cache_resource
+def get_pool():
+    # Maakt één centrale verbinding die open blijft staan
+    return ConnectionPool(DATABASE_URL, min_size=1, max_size=10)
+
+def exec_sql(sql, params=(), returning_id=False):
+    pool = get_pool()
+    with pool.connection() as conn:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            if returning_id:
+                row = cur.fetchone()
+                return row[0] if row else None
+    return None
 
 DATABASE_URL = None
 try:
@@ -65,11 +76,21 @@ def init_db():
     );
     """)
 
-def q(sql, params=(), one=False):
-    conn = db()
-    with conn.cursor() as cur:
-        cur.execute(sql, params)
-        return cur.fetchone() if one else cur.fetchall()
+@st.cache_data(ttl=300) # Onthoudt resultaten 5 minuten
+def q_cached(sql, params=()):
+    pool = get_pool()
+    with pool.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            return cur.fetchall()
+
+def q_fresh(sql, params=(), one=False):
+    # Gebruik dit voor zaken die direct moeten updaten (zoals proza)
+    pool = get_pool()
+    with pool.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            return cur.fetchone() if one else cur.fetchall()
 
 def exec_sql(sql, params=(), returning_id=False):
     conn = db()
@@ -163,7 +184,7 @@ def safe_get(d: dict, key: str) -> str:
 
 # Sidebar: project kiezen/maken
 st.sidebar.header("Project")
-projects = q("SELECT id, title FROM projects ORDER BY id DESC")
+projects = q_cached("SELECT id, title FROM projects ORDER BY id DESC")
 proj_titles = ["(nieuw project)"] + [p[1] for p in projects]
 choice = st.sidebar.selectbox("Kies project", proj_titles, index=0)
 
@@ -183,10 +204,7 @@ project = q("SELECT title, synopsis FROM projects WHERE id=%s", (project_id,), o
 
 # Sidebar: hoofdstukken-navigatie
 st.sidebar.subheader("Hoofdstukken")
-sidebar_chapters = q(
-    "SELECT id, ord, title FROM chapters WHERE project_id=%s ORDER BY ord, id",
-    (project_id,)
-)
+sidebar_chapters = q_cached("SELECT id, ord, title FROM chapters WHERE project_id=%s ORDER BY ord, id", (project_id,))
 
 if sidebar_chapters:
     for cid, cord, ctitle in sidebar_chapters:
@@ -513,6 +531,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
