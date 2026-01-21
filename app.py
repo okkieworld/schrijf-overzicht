@@ -426,6 +426,42 @@ if "ai_prompt_box" not in st.session_state:
     st.session_state.ai_prompt_box = ""
 if "ai_json_box" not in st.session_state:
     st.session_state.ai_json_box = ""
+b1, b2, b3, b4 = st.columns([1,1,1,1])
+
+with b1:
+    if st.button("Scène opslaan"):
+        exec_sql("""
+        UPDATE scenes SET
+            title=%s, ord=%s, status=%s, purpose=%s, setting=%s, pov=%s, conflict=%s, outcome=%s,
+            setup=%s, payoff=%s, summary=%s
+        WHERE id=%s
+        """, (title2.strip() or title, int(ord2), status2, purpose2, setting2, pov2,
+              conflict2, outcome2, setup2, payoff2, summary2, scene_id))
+        normalize_order("scenes", "chapter_id", chapter_id)
+        st.rerun()
+
+with b2:
+    if st.button("Samenvat uit proza"):
+        new_sum = basic_summarize(prose or "")
+        exec_sql("UPDATE scenes SET summary=%s WHERE id=%s", (new_sum, scene_id))
+        st.rerun()
+
+with b3:
+    if st.button("Leeg scènekaart (outline)"):
+        exec_sql("""
+        UPDATE scenes SET
+            purpose=%s, setting=%s, pov=%s, conflict=%s, outcome=%s, setup=%s, payoff=%s, summary=%s
+        WHERE id=%s
+        """, ("", "", "", "", "", "", "", "", scene_id))
+        st.rerun()
+
+with b4:
+    if st.button("Scène verwijderen"):
+        exec_sql("DELETE FROM scenes WHERE id=%s", (scene_id,))
+        normalize_order("scenes", "chapter_id", chapter_id)
+        st.rerun()
+        
+st.divider()
 
 st.markdown("### AI-hulp: proza → scènekaart (handmatig kopiëren/plakken)")
 
@@ -544,6 +580,7 @@ for sid, o, t, status, pov, setting, sm in scenes_scan:
         st.caption("— geen samenvatting —")
 
     st.divider()
+
 
 
 
